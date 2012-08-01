@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" >
+    <title>AislePOC plugin</title>
+    <script src="lib/plugin.js"></script>
+    <script src="lib/dtd.js"></script>
+    <script>
+    window.onload = function() {
+        try {
+        var provider = new eclipse.PluginProvider();
+        provider.registerServiceProvider("orion.core.contenttype", {}, {
+            contentTypes: [{
+                id: "application/xml-dtd",
+                name: "DTD",
+                extension: ["dtd"],
+                "extends": "text/plain"
+        }] });
+        provider.registerServiceProvider("orion.edit.highlighter",
+                                         {
+                                            // "grammar" provider is purely declarative. No service methods.
+                                        }, {
+                                            type : "grammar",
+                                            contentType: ["application/xml-dtd"],
+                                            grammar: {
+                                                patterns: [ {
+                                                    begin: "<!--",
+                                                    end: "-->",
+                                                    captures: { "0": "punctuation.definition.comment.html" },
+                                                    contentName: "comment.block.html"
+                                                } ]
+                                            }
+                                        });
+        provider.registerServiceProvider("orion.edit.contentAssist",
+            {
+                computeProposals: function(buffer, offset, context) {
+                    var keywords = [ "<!ENTITY" ];
+                    var proposals = [];
+                    for (var i=0; i < keywords.length; i++) {
+                        var keyword = keywords[i];
+                        if (keyword.indexOf(context.prefix) === 0) {
+                            console.log(context)
+                            proposals.push({
+                                proposal: keyword.substring(context.prefix.length),
+                                description: keyword
+                            });
+                        }
+                    }
+                    return proposals;
+                }
+            },
+            {
+                name: "DTD content assist",
+                contentType: ["application/xml-dtd"]
+            });
+        provider.registerServiceProvider("orion.edit.validator",
+            new DTDValidator(),
+            {
+                contentType: ["application/xml-dtd"]
+            });
+        provider.connect();
+        } catch (e) {
+            console.debug("Can't install Aisle POC", e)
+        }
+    };
+    </script>
+</head>
+<body>
+
+</body>
+</html>
